@@ -6,149 +6,300 @@
     <link rel="apple-touch-icon" href="/icons/app-touch-icon.png">
     <title>厦门麻将计分器</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
+        * { margin: 0; padding: 0; box-sizing: border-box; touch-action: manipulation; }
         body {
-            font-family: -apple-system, "Helvetica Neue", "Microsoft YaHei", sans-serif;
-            background: #000;
+            font-family: -apple-system, "Helvetica Neue", "PingFang SC", sans-serif;
+            background: #050505; /* 更深邃的黑 */
             color: #fff;
             height: 100dvh;
             overflow: hidden;
             -webkit-user-select: none;
             user-select: none;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
+
+        /* 背景微弱的氛围光 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: -10%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 50%;
+            background: radial-gradient(ellipse at center, rgba(255,159,10,0.05) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
         .calc {
+            width: 100%;
             max-width: 420px;
             height: 100%;
-            margin: 0 auto;
-            padding: 0 16px 20px;
+            padding: 20px 16px 20px;
             display: flex;
             flex-direction: column;
+            justify-content: flex-end;
+            gap: 16px;
+            position: relative;
+            z-index: 1;
         }
-        .display {
+
+        /* ========== 1. 结果展示区 (升级重点) ========== */
+        .results-container {
             flex: 1;
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            padding: 8px;
-            text-align: right;
-            min-height: 0;
+            gap: 12px;
+            margin-bottom: 10px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.4s ease, transform 0.4s ease;
         }
-        .type-label {
-            font-size: 18px;
-            color: #8e8e93;
+        .results-container.show {
+            opacity: 1;
+            transform: translateY(0);
         }
-        .fan-display {
-            font-size: 72px;
-            font-weight: 200;
-            line-height: 1.1;
-        }
-        .fan-display .unit {
-            font-size: 22px;
-            color: #8e8e93;
-            font-weight: 400;
-            margin-left: 2px;
-        }
-        .results {
-            display: none;
+
+        .main-results {
+            display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1px;
-            background: #2c2c2e;
-            border-radius: 12px;
-            overflow: hidden;
-            margin: 8px 0;
-        }
-        .results.show { display: grid; }
-        .result-item {
-            background: #1c1c1e;
-            padding: 10px 8px;
-            text-align: center;
-        }
-        .result-label {
-            font-size: 12px;
-            color: #8e8e93;
-            margin-bottom: 2px;
-        }
-        .result-value {
-            font-size: 24px;
-            font-weight: 600;
-            color: #ff9f0a;
-        }
-        .types {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .type-btn {
-            padding: 10px 0;
-            border-radius: 999px;
-            border: none;
-            font-size: 14px;
-            font-weight: 500;
-            background: #a5a5a5;
-            color: #000;
-            cursor: pointer;
-            -webkit-tap-highlight-color: transparent;
-        }
-        .type-btn:active { background: #d9d9d9; }
-        .type-btn.active { background: #ff9f0a; color: #fff; }
-        .type-btn.active:active { background: #ffc55c; }
-        .pad {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
             gap: 12px;
         }
-        .btn {
-            height: 64px;
+
+        .result-card {
+            background: linear-gradient(180deg, rgba(30,30,32,0.9) 0%, rgba(20,20,22,0.9) 100%);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 20px;
+            padding: 18px 0;
+            text-align: center;
+            position: relative;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            overflow: hidden;
+        }
+
+        /* 顶部发光装饰条 */
+        .result-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 20%; right: 20%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #ff9f0a, transparent);
+            border-radius: 0 0 50% 50%;
+            opacity: 0.8;
+            box-shadow: 0 0 10px rgba(255,159,10,0.3);
+        }
+
+        .result-label {
+            font-size: 14px;
+            color: #8e8e93;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .result-value {
+            font-size: 48px;
+            font-weight: 600;
+            color: #ff9f0a;
+            text-shadow: 0 0 20px rgba(255,159,10,0.15);
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* 二庄三庄徽章 */
+        .sub-results {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .result-badge {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 8px 0;
+            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .badge-label {
+            font-size: 12px;
+            color: #636366;
+        }
+
+        .badge-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #ff9f0a;
+            text-shadow: 0 0 8px rgba(255,159,10,0.1);
+        }
+
+        /* ========== 2. 番数显示区 ========== */
+        .display {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 0 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 12px;
+            margin-bottom: 4px;
+        }
+
+        .type-label {
+            font-size: 16px;
+            color: #8e8e93;
+            background: rgba(255,255,255,0.04);
+            padding: 4px 12px;
+            border-radius: 20px;
+            margin-bottom: 6px;
+        }
+
+        .fan-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 4px;
+        }
+
+        .fan-display {
+            font-size: 52px;
+            font-weight: 300;
+            line-height: 1;
+            letter-spacing: -2px;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .fan-display .unit {
+            font-size: 16px;
+            color: #8e8e93;
+            font-weight: 400;
+        }
+
+        /* ========== 3. 键盘区 ========== */
+        .input-area {
+            display: flex;
+            gap: 12px;
+        }
+
+        .types {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 64px;
+            flex-shrink: 0;
+        }
+
+        .type-btn {
+            flex: 1;
             border-radius: 999px;
             border: none;
-            font-size: 28px;
+            font-size: 12px;
+            font-weight: 500;
+            background: rgba(142, 142, 147, 0.15);
+            color: #8e8e93;
+            cursor: pointer;
+            -webkit-tap-highlight-color: transparent;
+            transition: all 0.2s;
+            min-height: 0;
+            letter-spacing: 1px;
+        }
+        .type-btn:active { background: rgba(255,255,255,0.15); }
+        .type-btn.active {
+            background: #ff9f0a;
+            color: #000;
+            box-shadow: 0 4px 12px rgba(255,159,10,0.3);
+        }
+        .type-btn.active:active { background: #ffc55c; }
+
+        .pad {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .btn {
+            height: 58px;
+            border-radius: 999px;
+            border: none;
+            font-size: 24px;
             font-weight: 400;
             cursor: pointer;
             -webkit-tap-highlight-color: transparent;
+            transition: transform 0.1s, background 0.1s;
         }
-        .btn.num { background: #333; color: #fff; }
+        .btn:active { transform: scale(0.95); }
+
+        .btn.num {
+            background: rgba(51, 51, 51, 0.7);
+            color: #fff;
+            backdrop-filter: blur(2px);
+        }
         .btn.num:active { background: #737373; }
-        .btn.func { background: #a5a5a5; color: #000; font-size: 22px; }
-        .btn.func:active { background: #d9d9d9; }
+
+        .btn.func {
+            background: rgba(165, 165, 165, 0.2);
+            color: #fff;
+            font-size: 18px;
+            backdrop-filter: blur(2px);
+        }
+        .btn.func:active { background: rgba(255,255,255,0.2); }
+
         .btn.eq {
             grid-column: span 3;
-            background: #ff9f0a;
-            color: #fff;
-            font-size: 30px;
-            font-weight: 500;
+            background: linear-gradient(135deg, #ff9f0a 0%, #f68e00 100%);
+            color: #000;
+            font-size: 24px;
+            font-weight: 600;
+            box-shadow: 0 4px 16px rgba(255,159,10,0.25);
+            letter-spacing: 2px;
         }
-        .btn.eq:active { background: #ffc55c; }
+        .btn.eq:active { background: #ffc55c; box-shadow: 0 2px 8px rgba(255,159,10,0.1); }
     </style>
 </head>
 <body>
-    <div class="calc">
-        <div class="display">
-            <div class="type-label" id="typeLabel">胡</div>
+<div class="calc">
+    <!-- 1. 结果展示 -->
+    <div class="results-container" id="results">
+        <div class="main-results">
+            <div class="result-card">
+                <div class="result-label">闲 家</div>
+                <div class="result-value" id="r-xian">-</div>
+            </div>
+            <div class="result-card">
+                <div class="result-label">庄 家</div>
+                <div class="result-value" id="r-zhuang">-</div>
+            </div>
+        </div>
+        <div class="sub-results">
+            <div class="result-badge">
+                <span class="badge-label">二庄</span>
+                <span class="badge-value" id="r-er">-</span>
+            </div>
+            <div class="result-badge">
+                <span class="badge-label">三庄</span>
+                <span class="badge-value" id="r-san">-</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 番数输入及显示 -->
+    <div class="display">
+        <div class="type-label" id="typeLabel">胡</div>
+        <div class="fan-wrapper">
             <div class="fan-display">
                 <span id="fanNum">0</span><span class="unit">番</span>
             </div>
         </div>
+    </div>
 
-        <div class="results" id="results">
-            <div class="result-item">
-                <div class="result-label">闲家</div>
-                <div class="result-value" id="r-xian">-</div>
-            </div>
-            <div class="result-item">
-                <div class="result-label">庄家</div>
-                <div class="result-value" id="r-zhuang">-</div>
-            </div>
-            <div class="result-item">
-                <div class="result-label">二庄</div>
-                <div class="result-value" id="r-er">-</div>
-            </div>
-            <div class="result-item">
-                <div class="result-label">三庄</div>
-                <div class="result-value" id="r-san">-</div>
-            </div>
-        </div>
-
+    <!-- 3. 键盘 -->
+    <div class="input-area">
         <div class="types">
             <button class="type-btn active" data-mult="1">胡</button>
             <button class="type-btn" data-mult="2">自摸</button>
@@ -156,7 +307,6 @@
             <button class="type-btn" data-mult="8">双游</button>
             <button class="type-btn" data-mult="16">三金倒</button>
         </div>
-
         <div class="pad">
             <button class="btn num" data-n="7">7</button>
             <button class="btn num" data-n="8">8</button>
@@ -167,74 +317,75 @@
             <button class="btn num" data-n="1">1</button>
             <button class="btn num" data-n="2">2</button>
             <button class="btn num" data-n="3">3</button>
-            <button class="btn func" id="btnAC">AC</button>
+            <button class="btn func" id="btnAC">清空</button>
             <button class="btn num" data-n="0">0</button>
             <button class="btn func" id="btnDel">⌫</button>
             <button class="btn eq" id="btnEq">=</button>
         </div>
     </div>
+</div>
 
-    <script>
-        let mult = 1;
-        let fan = '0';
-        let hasResult = false;
-        const fanEl = document.getElementById('fanNum');
-        const resEl = document.getElementById('results');
-        const typeLabelEl = document.getElementById('typeLabel');
+<script>
+    let mult = 1;
+    let fan = '0';
+    let hasResult = false;
+    const fanEl = document.getElementById('fanNum');
+    const resEl = document.getElementById('results');
+    const typeLabelEl = document.getElementById('typeLabel');
 
-        document.querySelectorAll('.type-btn').forEach(btn => {
-            btn.onclick = () => {
-                mult = +btn.dataset.mult;
-                typeLabelEl.textContent = btn.textContent;
-                document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
-                if (hasResult) calc();
-            };
-        });
+    document.querySelectorAll('.type-btn').forEach(btn => {
+        btn.onclick = () => {
+            mult = +btn.dataset.mult;
+            typeLabelEl.textContent = btn.textContent;
+            document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            if (hasResult) calc();
+        };
+    });
 
-        document.querySelectorAll('.btn.num').forEach(btn => {
-            btn.onclick = () => pressNum(btn.dataset.n);
-        });
+    document.querySelectorAll('.btn.num').forEach(btn => {
+        btn.onclick = () => pressNum(btn.dataset.n);
+    });
 
-        document.getElementById('btnAC').onclick = clearAll;
-        document.getElementById('btnDel').onclick = backspace;
-        document.getElementById('btnEq').onclick = calc;
+    document.getElementById('btnAC').onclick = clearAll;
+    document.getElementById('btnDel').onclick = backspace;
+    document.getElementById('btnEq').onclick = calc;
 
-        document.addEventListener('keydown', e => {
-            if (e.key >= '0' && e.key <= '9') pressNum(e.key);
-            else if (e.key === 'Enter') calc();
-            else if (e.key === 'Backspace') backspace();
-            else if (e.key === 'Escape') clearAll();
-        });
+    document.addEventListener('keydown', e => {
+        if (e.key >= '0' && e.key <= '9') pressNum(e.key);
+        else if (e.key === 'Enter') calc();
+        else if (e.key === 'Backspace') backspace();
+        else if (e.key === 'Escape') clearAll();
+    });
 
-        function pressNum(n) {
-            if (hasResult) { fan = '0'; hasResult = false; resEl.classList.remove('show'); }
-            fan = fan === '0' ? n : (fan.length < 2 ? fan + n : fan);
-            fanEl.textContent = fan;
+    function pressNum(n) {
+        if (hasResult) { fan = '0'; hasResult = false; resEl.classList.remove('show'); }
+        fan = fan === '0' ? n : fan + n;
+        fanEl.textContent = fan;
+    }
+
+    function clearAll() {
+        fan = '0';
+        hasResult = false;
+        resEl.classList.remove('show');
+        fanEl.textContent = fan;
+    }
+
+    function backspace() {
+        if (hasResult) { hasResult = false; resEl.classList.remove('show'); }
+        fan = fan.length > 1 ? fan.slice(0, -1) : '0';
+        fanEl.textContent = fan;
+    }
+
+    function calc() {
+        const f = parseInt(fan) || 0;
+        const bases = { xian: 8, zhuang: 16, er: 32, san: 48 };
+        for (const [pos, base] of Object.entries(bases)) {
+            document.getElementById('r-' + pos).textContent = (base + f) * mult;
         }
-
-        function clearAll() {
-            fan = '0';
-            hasResult = false;
-            resEl.classList.remove('show');
-            fanEl.textContent = fan;
-        }
-
-        function backspace() {
-            if (hasResult) { hasResult = false; resEl.classList.remove('show'); }
-            fan = fan.length > 1 ? fan.slice(0, -1) : '0';
-            fanEl.textContent = fan;
-        }
-
-        function calc() {
-            const f = parseInt(fan) || 0;
-            const bases = { xian: 8, zhuang: 16, er: 32, san: 48 };
-            for (const [pos, base] of Object.entries(bases)) {
-                document.getElementById('r-' + pos).textContent = (base + f) * mult;
-            }
-            resEl.classList.add('show');
-            hasResult = true;
-        }
-    </script>
+        resEl.classList.add('show'); // 触发渐入动画
+        hasResult = true;
+    }
+</script>
 </body>
 </html>
